@@ -77,7 +77,7 @@
                                 </h3>
                                 <div class="-mx-1 flex product-options">
                                     <div class="px-1"> 
-                                        <a @click="remove( product )" class="hover:text-error-secondary cursor-pointer outline-none border-dashed py-1 border-b border-error-secondary text-sm">
+                                        <a @click="removeUsingIndex( index )" class="hover:text-error-secondary cursor-pointer outline-none border-dashed py-1 border-b border-error-secondary text-sm">
                                             <i class="las la-trash text-xl"></i>
                                         </a>
                                     </div>
@@ -314,7 +314,7 @@ export default {
             return this.visibleSection === 'cart';
         },
         customerName() {
-            return this.order.customer ? `${this.order.customer.first_name} ${this.order.customer.last_name}` : 'N/A';
+            return this.order.customer ? `${this.order.customer.first_name || this.order.customer.last_name ? this.getFirstName() : this.getUserName() }` : 'N/A';
         },
         couponName() {
             return __( 'Apply Coupon' );
@@ -401,6 +401,14 @@ export default {
         nsCurrency,
 
         switchTo,
+
+        getFirstName() {
+            return `${this.order.customer.first_name || ''} ${this.order.customer.last_name || '' }`;
+        },
+
+        getUserName() {
+            return this.order.customer.username;
+        },
 
         takeRandomClass() {
             return 'border-gray-500 bg-gray-400 text-white hover:bg-gray-500';
@@ -557,18 +565,22 @@ export default {
                 return nsSnackBar.error( __( `You're not allowed to add a discount on the cart.` ) ).subscribe();
             }
 
-            Popup.show( nsPosDiscountPopupVue, { 
-                reference,
-                type,
-                onSubmit( response ) {
-                    if ( type === 'product' ) {
-                        POS.updateProduct( reference, response );
-                    } else if ( type === 'cart' ) {
-                        POS.updateCart( reference, response );
+            const promise   =   new Promise( ( resolve, reject ) => {
+                Popup.show( nsPosDiscountPopupVue, { 
+                    reference,
+                    resolve,
+                    reject,
+                    type,
+                    onSubmit( response ) {
+                        if ( type === 'product' ) {
+                            POS.updateProduct( reference, response );
+                        } else if ( type === 'cart' ) {
+                            POS.updateCart( reference, response );
+                        }
                     }
-                }
-            }, {
-                popupClass: 'bg-white h:2/3 shadow-lg xl:w-1/4 lg:w-2/5 md:w-2/3 w-full'
+                }, {
+                    popupClass: 'bg-white h:2/3 shadow-lg xl:w-1/4 lg:w-2/5 md:w-2/3 w-full'
+                })
             })
         },
 
@@ -599,13 +611,13 @@ export default {
                 });
             }
         },
-        remove( product ) {
+        removeUsingIndex( index ) {
             Popup.show( PosConfirmPopup, {
                 title: __( 'Confirm Your Action' ),
                 message: __( 'Would you like to delete this product ?' ),
                 onAction( action ) {
                     if ( action ) {
-                        POS.removeProduct( product );
+                        POS.removeProductUsingIndex( index );
                     }
                 }
             });

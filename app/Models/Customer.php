@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Events\CustomerModelBootedEvent;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -41,15 +42,17 @@ class Customer extends UserScope
 
     protected static function booted()
     {
-        static::addGlobalScope('customers', function (Builder $builder) {
-            $role = DB::table('nexopos_roles')->where('namespace', Role::STORECUSTOMER)->first();
+        static::addGlobalScope( 'customers', function ( Builder $builder ) {
+            $role = DB::table( 'nexopos_roles' )->where( 'namespace', Role::STORECUSTOMER )->first();
 
-            $userRoleRelations = DB::table('nexopos_users_roles_relations')
-                ->where('role_id', $role->id)
-                ->get([ 'user_id', 'role_id' ]);
+            $userRoleRelations = DB::table( 'nexopos_users_roles_relations' )
+                ->where( 'role_id', $role->id )
+                ->get( [ 'user_id', 'role_id' ] );
 
-            $builder->whereIn('id', $userRoleRelations->map(fn($role) => $role->user_id)->toArray());
-        });
+            $builder->whereIn( 'id', $userRoleRelations->map( fn( $role ) => $role->user_id )->toArray() );
+
+            CustomerModelBootedEvent::dispatch( $builder );
+        } );
     }
 
     /**
